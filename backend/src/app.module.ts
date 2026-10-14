@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AppController } from './app.controller';
 import { ConsultModule } from './modules/consult/consult.module';
 import { RagModule } from './modules/rag/rag.module';
 import { LlmModule } from './modules/llm/llm.module';
@@ -25,5 +26,6 @@ import { LlmModule } from './modules/llm/llm.module';
     RagModule,
     LlmModule,
   ],
+  controllers: [AppController],
 })
 export class AppModule {}
