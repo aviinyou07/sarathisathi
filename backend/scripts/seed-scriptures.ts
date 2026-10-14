@@ -58,7 +58,7 @@ const KRISHNA_EPISODES = [
 async function main() {
   console.log('🚀 Starting Sarathi Sakha Scripture Seeder...');
 
-  // 1. Connect to PostgreSQL
+  // 1. Connect to local PostgreSQL
   const client = new Client({
     connectionString: process.env.DATABASE_URL || 'postgres://postgres@localhost:5432/sarathi_sakha',
   });
@@ -73,7 +73,7 @@ async function main() {
       console.log('📜 Applying database schema (init_schema.sql)...');
       const schemaSql = fs.readFileSync(schemaPath, 'utf8');
       await client.query(schemaSql);
-      console.log('✅ Schema and search_spiritual_wisdom() RPC function created successfully.');
+      console.log('✅ Schema and search_spiritual_wisdom() RPC function initialized.');
     }
 
     // 3. Import Xenova Transformers for in-process local embeddings (0 tokens, 100% free)
@@ -84,10 +84,10 @@ async function main() {
     });
     console.log('✅ Local embedding model ready (384-dimensional ONNX).');
 
-    async function computeEmbedding(text: string): Promise<string> {
+    async function computeEmbedding(text: string): Promise<number[]> {
       const clean = text.replace(/\n+/g, ' ').slice(0, 512);
       const res = await embedder(clean, { pooling: 'mean', normalize: true });
-      return `[${Array.from(res.data).join(',')}]`;
+      return Array.from(res.data as Float32Array);
     }
 
     // 4. Seed Krishna Episodes
@@ -98,7 +98,7 @@ async function main() {
 
       await client.query(
         `INSERT INTO krishna_episodes (title, parva_or_canto, dilemma_context, krishna_action, philosophical_lesson, embedding)
-         VALUES ($1, $2, $3, $4, $5, $6::vector)
+         VALUES ($1, $2, $3, $4, $5, $6)
          ON CONFLICT DO NOTHING`,
         [ep.title, ep.parva_or_canto, ep.dilemma_context, ep.krishna_action, ep.philosophical_lesson, emb]
       );
@@ -111,23 +111,23 @@ async function main() {
     const transRes = await fetch('https://raw.githubusercontent.com/praneshp1org/Bhagavad-Gita-JSON-data/main/translation.json');
     const commRes = await fetch('https://raw.githubusercontent.com/praneshp1org/Bhagavad-Gita-JSON-data/main/commentary.json');
 
-    const verses = await versesRes.json() as any[];
-    const translations = await transRes.json() as any[];
-    const commentaries = await commRes.json() as any[];
+    const verses = (await versesRes.json()) as any[];
+    const translations = (await transRes.json()) as any[];
+    const commentaries = (await commRes.json()) as any[];
 
     console.log(`📥 Loaded ${verses.length} verses from open source archive.`);
 
-    // Build lookup maps for translation and commentary
+    // Build lookup maps
     const transMap = new Map<number, { english: string; hindi: string }>();
     for (const t of translations) {
       if (!transMap.has(t.verse_id)) {
         transMap.set(t.verse_id, { english: '', hindi: '' });
       }
       const item = transMap.get(t.verse_id)!;
-      if (t.lang === 'english' && (!item.english || t.authorName.includes('Sivananda') || t.authorName.includes('Adidevananda'))) {
+      if (t.lang === 'english' && (!item.english || t.authorName?.includes('Sivananda') || t.authorName?.includes('Adidevananda'))) {
         item.english = t.description?.trim() || '';
       }
-      if (t.lang === 'hindi' && (!item.hindi || t.authorName.includes('Ramsukhdas'))) {
+      if (t.lang === 'hindi' && (!item.hindi || t.authorName?.includes('Ramsukhdas'))) {
         item.hindi = t.description?.trim() || '';
       }
     }
@@ -139,7 +139,6 @@ async function main() {
       }
     }
 
-    // Theme categorizer
     function getTheme(chapter: number): string {
       switch (chapter) {
         case 1: return 'Grief & Moral Turmoil';
@@ -177,7 +176,7 @@ async function main() {
       await client.query(
         `INSERT INTO gita_verses (
            chapter, verse, sanskrit, transliteration, word_meanings, english_translation, hindi_translation, commentary, theme, embedding
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::vector)
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          ON CONFLICT (chapter, verse) DO UPDATE SET
            sanskrit = EXCLUDED.sanskrit,
            transliteration = EXCLUDED.transliteration,
@@ -199,7 +198,7 @@ async function main() {
       );
 
       insertedCount++;
-      if (insertedCount % 50 === 0 || insertedCount === verses.length) {
+      if (insertedCount % 70 === 0 || insertedCount === verses.length) {
         console.log(`✨ Progress: [${insertedCount}/${verses.length}] verses embedded and stored in PostgreSQL.`);
       }
     }

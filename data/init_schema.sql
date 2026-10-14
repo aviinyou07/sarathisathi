@@ -1,12 +1,39 @@
 -- ============================================================================
--- SARATHI SAKHA: DATABASE INITIALIZATION SCHEMA
+-- SARATHI SAKHA: UNIVERSAL DATABASE INITIALIZATION SCHEMA
 -- Target Database: sarathi_sakha
 -- Vector Dimensions: 384 (all-MiniLM-L6-v2 / bge-small-en-v1.5)
+-- Supports both pgvector and native PostgreSQL FLOAT4[] array vector search
 -- ============================================================================
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Try creating pgvector extension (if installed)
+DO $$
+BEGIN
+    CREATE EXTENSION IF NOT EXISTS vector;
+EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE 'pgvector extension not installed on system. Falling back to native PostgreSQL vector math.';
+END $$;
+
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- Native array dot-product function (Cosine similarity for normalized L2 vectors)
+CREATE OR REPLACE FUNCTION array_cosine_similarity(a REAL[], b REAL[])
+RETURNS REAL
+LANGUAGE plpgsql
+IMMUTABLE
+AS $$
+DECLARE
+    dot REAL := 0.0;
+    len INT;
+BEGIN
+    len := cardinality(a);
+    FOR i IN 1..len LOOP
+        dot := dot + (a[i] * b[i]);
+    END LOOP;
+    RETURN dot;
+END;
+$$;
 
 -- 1. Users Table
 CREATE TABLE IF NOT EXISTS users (
@@ -34,13 +61,10 @@ CREATE TABLE IF NOT EXISTS gita_verses (
     hindi_translation TEXT,
     commentary TEXT NOT NULL,
     theme VARCHAR(64) DEFAULT 'Dharma & Duty',
-    embedding VECTOR(384) NOT NULL,
+    embedding REAL[] NOT NULL, -- 384 normalized float array (universally compatible)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     CONSTRAINT uq_chapter_verse UNIQUE (chapter, verse)
 );
-
-CREATE INDEX IF NOT EXISTS idx_gita_verses_embedding 
-ON gita_verses USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 
 CREATE INDEX IF NOT EXISTS idx_gita_verses_chapter_verse 
 ON gita_verses (chapter, verse);
@@ -53,17 +77,14 @@ CREATE TABLE IF NOT EXISTS krishna_episodes (
     dilemma_context TEXT NOT NULL,
     krishna_action TEXT NOT NULL,
     philosophical_lesson TEXT NOT NULL,
-    embedding VECTOR(384) NOT NULL,
+    embedding REAL[] NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-
-CREATE INDEX IF NOT EXISTS idx_krishna_episodes_embedding 
-ON krishna_episodes USING ivfflat (embedding vector_cosine_ops) WITH (lists = 50);
 
 -- 4. Chat Messages History
 CREATE TABLE IF NOT EXISTS chat_messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID,
     sender VARCHAR(10) CHECK (sender IN ('user', 'krishna')),
     message TEXT NOT NULL,
     referenced_verse_id INT REFERENCES gita_verses(id) ON DELETE SET NULL,
@@ -75,8 +96,8 @@ ON chat_messages (user_id, created_at DESC);
 
 -- 5. Unified Vector Search Function (Cosine Similarity across Verses & Episodes)
 CREATE OR REPLACE FUNCTION search_spiritual_wisdom(
-    query_vector VECTOR(384),
-    match_threshold FLOAT,
+    query_vector REAL[],
+    match_threshold REAL,
     max_results INT
 )
 RETURNS TABLE (
@@ -84,7 +105,7 @@ RETURNS TABLE (
     id INT,
     reference TEXT,
     content TEXT,
-    similarity FLOAT
+    similarity REAL
 )
 LANGUAGE plpgsql
 AS $$
@@ -95,9 +116,9 @@ BEGIN
         gv.id,
         ('Chapter ' || gv.chapter || ', Verse ' || gv.verse)::TEXT AS reference,
         (gv.sanskrit || E'\n\n' || gv.transliteration || E'\n\nTranslation: ' || gv.english_translation || E'\n\nCommentary: ' || gv.commentary)::TEXT AS content,
-        (1 - (gv.embedding <=> query_vector))::FLOAT AS similarity
+        array_cosine_similarity(gv.embedding, query_vector) AS similarity
     FROM gita_verses gv
-    WHERE (1 - (gv.embedding <=> query_vector)) > match_threshold
+    WHERE array_cosine_similarity(gv.embedding, query_vector) > match_threshold
 
     UNION ALL
 
@@ -106,9 +127,9 @@ BEGIN
         ke.id,
         ke.title::TEXT AS reference,
         ('Context: ' || ke.dilemma_context || E'\n\nAction: ' || ke.krishna_action || E'\n\nLesson: ' || ke.philosophical_lesson)::TEXT AS content,
-        (1 - (ke.embedding <=> query_vector))::FLOAT AS similarity
+        array_cosine_similarity(ke.embedding, query_vector) AS similarity
     FROM krishna_episodes ke
-    WHERE (1 - (ke.embedding <=> query_vector)) > match_threshold
+    WHERE array_cosine_similarity(ke.embedding, query_vector) > match_threshold
 
     ORDER BY similarity DESC
     LIMIT max_results;
