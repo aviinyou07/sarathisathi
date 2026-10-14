@@ -75,6 +75,7 @@ export const ChatScreen: React.FC = () => {
           botMsgId,
           '\n\n[The connection is fragmented. Take a slow breath, and speak to me again.]',
         );
+        setIsStreaming(false);
       },
       onDone: () => {
         setIsStreaming(false);
