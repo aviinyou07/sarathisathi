@@ -12,7 +12,8 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "seed": "ts-node scripts/seed-scriptures.ts"
+    "seed": "ts-node scripts/seed-scriptures.ts",
+    "chat": "ts-node scripts/cli-chat.ts"
   },
   "dependencies": {
     "@img/sharp-linux-x64": "^0.35.5",
