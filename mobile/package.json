@@ -5,7 +5,7 @@
   "scripts": {
     "start": "expo start",
     "start:tunnel": "expo start --tunnel",
-    "android": "expo start --android",
+    "android": "export ANDROID_HOME=$HOME/Android/Sdk PATH=$PATH:$HOME/Android/Sdk/platform-tools:$HOME/Android/Sdk/emulator && expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web"
   },
@@ -18,7 +18,7 @@
     "lucide-react-native": "^0.460.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "react-native": "0.76.2",
+    "react-native": "0.76.9",
     "react-native-safe-area-context": "4.12.0",
     "react-native-web": "~0.19.13",
     "zustand": "^5.0.1"
