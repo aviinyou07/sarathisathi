@@ -27,6 +27,20 @@ export class ConsultService {
       }
     }
 
+    // 1b. Fast Warm Greeting Check (<10ms response for simple salutations)
+    const trimmed = query.trim().toLowerCase();
+    const isGreeting = /^(hi|hello|hey|hare\s*krishna|radhe\s*radhe|pranam|namaste|jai\s*shree\s*krishna)[\s!.]*$/i.test(trimmed);
+    if (isGreeting) {
+      this.logger.log(`Fast greeting handled for: "${trimmed}"`);
+      const greetingText = `Pranam, my dear friend. I am right here beside you, ready to guide your chariot through the fields of your life. 
+
+Tell me, Partha—what dilemma, confusion, fear, or duty weighs upon your heart today? Speak freely, as friend to friend.`;
+      res.write(`data: ${JSON.stringify({ text: greetingText })}\n\n`);
+      res.write('data: [DONE]\n\n');
+      res.end();
+      return;
+    }
+
     try {
       // 2. Fetch Relevant Shastric Wisdom via Vector Search
       this.logger.log(`Searching spiritual wisdom for query: "${query.slice(0, 50)}..."`);
@@ -87,6 +101,8 @@ Prescribe ONE concrete physical, breath, or meditative action they must perform 
   }
 
   private async saveChatLog(userId: string, userMessage: string): Promise<void> {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+    if (!isUuid) return;
     await this.dataSource.query(
       `INSERT INTO chat_messages (user_id, sender, message) VALUES ($1, 'user', $2)`,
       [userId, userMessage],

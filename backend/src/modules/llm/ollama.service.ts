@@ -25,7 +25,7 @@ export class OllamaService {
           stream: true,
           options: {
             temperature: 0.35,
-            num_ctx: 4096,
+            num_ctx: 2048,
             top_p: 0.9,
           },
         }),
