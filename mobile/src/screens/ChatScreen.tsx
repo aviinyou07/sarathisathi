@@ -30,6 +30,7 @@ export const ChatScreen: React.FC = () => {
     setIsStreaming,
     decrementQuota,
     clearHistory,
+    setHasCompletedOnboarding,
   } = useChatStore();
 
   const [input, setInput] = useState('');
@@ -39,7 +40,13 @@ export const ChatScreen: React.FC = () => {
     Alert.alert(
       'Sarathi Sakha • Shastric Guidance',
       'Sarathi Sakha offers philosophical & spiritual counsel grounded in the 700 verses of the Bhagavad Gita and episodes of the Mahabharata.\n\nDisclaimer: This companion utilizes generative AI to mirror sacred wisdom. It is not a licensed provider of mental health, medical, psychiatric, or legal counsel. Professional emergency helplines are available in moments of crisis.',
-      [{ text: 'Understood', style: 'default' }],
+      [
+        {
+          text: 'View Sacred Intro',
+          onPress: () => setHasCompletedOnboarding(false),
+        },
+        { text: 'Understood', style: 'default' },
+      ],
     );
   };
 

@@ -1,13 +1,17 @@
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ChatScreen } from './src/screens/ChatScreen';
+import { useChatStore } from './src/store/useChatStore';
+import { OnboardingScreen } from './src/screens/OnboardingScreen';
+import { MainNavigation } from './src/components/MainNavigation';
 
 export default function App() {
+  const { hasCompletedOnboarding } = useChatStore();
+
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
-      <ChatScreen />
+      {!hasCompletedOnboarding ? <OnboardingScreen /> : <MainNavigation />}
     </SafeAreaProvider>
   );
 }
