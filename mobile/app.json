@@ -9,17 +9,24 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0A0A0F"
+      "backgroundColor": "#0A0912"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.sarathisakha.app"
+      "bundleIdentifier": "com.sarathisakha.app",
+      "buildNumber": "1.0.0"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0A0A0F"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0A0912"
       },
-      "package": "com.sarathisakha.app"
+      "package": "com.sarathisakha.app",
+      "versionCode": 1,
+      "permissions": ["INTERNET"]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {

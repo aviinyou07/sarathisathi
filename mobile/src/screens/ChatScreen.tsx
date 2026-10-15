@@ -9,10 +9,11 @@ import {
   Platform,
   ActivityIndicator,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Send } from 'lucide-react-native';
+import { Send, Info, RotateCcw } from 'lucide-react-native';
 import { colors } from '../theme/colors';
 import { useChatStore, ChatMessage } from '../store/useChatStore';
 import { ChatBubble } from '../components/ChatBubble';
@@ -28,10 +29,31 @@ export const ChatScreen: React.FC = () => {
     markCrisis,
     setIsStreaming,
     decrementQuota,
+    clearHistory,
   } = useChatStore();
 
   const [input, setInput] = useState('');
   const flatListRef = useRef<FlatList>(null);
+
+  const handleShowInfo = () => {
+    Alert.alert(
+      'Sarathi Sakha • Shastric Guidance',
+      'Sarathi Sakha offers philosophical & spiritual counsel grounded in the 700 verses of the Bhagavad Gita and episodes of the Mahabharata.\n\nDisclaimer: This companion utilizes generative AI to mirror sacred wisdom. It is not a licensed provider of mental health, medical, psychiatric, or legal counsel. Professional emergency helplines are available in moments of crisis.',
+      [{ text: 'Understood', style: 'default' }],
+    );
+  };
+
+  const handleClear = () => {
+    if (isStreaming) return;
+    Alert.alert(
+      'Begin New Reflection',
+      'Would you like to clear the current battlefield dialogue and begin a fresh spiritual reflection?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Begin Fresh', style: 'destructive', onPress: clearHistory },
+      ],
+    );
+  };
 
   const sendMessage = async () => {
     const userText = input.trim();
@@ -91,12 +113,30 @@ export const ChatScreen: React.FC = () => {
       <SafeAreaView style={styles.safeArea}>
         {/* Navigation Bar */}
         <View style={styles.navBar}>
-          <View>
+          <View style={styles.titleContainer}>
             <Text style={styles.navTitle}>Sarathi Sakha</Text>
             <Text style={styles.navSubtitle}>Divine Charioteer & Constant Friend</Text>
           </View>
-          <View style={styles.quotaPill}>
-            <Text style={styles.quotaText}>{dailyQuotaLeft} Free Left</Text>
+          <View style={styles.navActions}>
+            <TouchableOpacity
+              onPress={handleClear}
+              style={styles.navIconBtn}
+              accessibilityLabel="Reset conversation"
+            >
+              <RotateCcw size={16} color={colors.textSecondary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleShowInfo}
+              style={styles.navIconBtn}
+              accessibilityLabel="Spiritual & AI Disclaimer"
+            >
+              <Info size={16} color={colors.goldPrimary} />
+            </TouchableOpacity>
+
+            <View style={styles.quotaPill}>
+              <Text style={styles.quotaText}>{dailyQuotaLeft} Free</Text>
+            </View>
           </View>
         </View>
 
@@ -173,6 +213,19 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 11,
     marginTop: 2,
+  },
+  titleContainer: {
+    flex: 1,
+  },
+  navActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  navIconBtn: {
+    padding: 7,
+    marginRight: 6,
+    borderRadius: 8,
+    backgroundColor: '#161422',
   },
   quotaPill: {
     paddingVertical: 4,
